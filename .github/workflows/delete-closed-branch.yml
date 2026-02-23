@@ -1,0 +1,31 @@
+name: Delete PR Branch After Merge to Main
+
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  delete-branch:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete merged branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME=${{ github.event.pull_request.head.ref }}
+
+          # Skip main branch
+          if [ "$BRANCH_NAME" = "main" ]; then
+            echo "Branch is main, skipping deletion"
+            exit 0
+          fi
+
+          echo "Deleting branch: $BRANCH_NAME"
+
+          # Delete branch using GitHub CLI
+          gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/$BRANCH_NAME" || {
+            echo "Failed to delete branch $BRANCH_NAME"
+            exit 1
+          }
